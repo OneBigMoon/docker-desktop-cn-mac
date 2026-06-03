@@ -18,7 +18,7 @@
 3. 按提示输入 macOS 管理员密码
 4. 等待进度到 100%，默认不会主动重启 Docker Desktop
 
-图形 App 默认使用不重启模式：补丁会写入到 Docker Desktop 资源中，Docker 引擎不中断。如果界面没有立刻变化，刷新或重新打开 Docker Desktop 前端后生效。
+图形 App 和 PKG 默认使用安全验证模式：先备份，再写入补丁，然后短暂关闭并重新唤醒 Docker Desktop；确认没有崩溃且 Docker Engine 正常后才算成功。如果验证失败，会自动恢复安装前备份，避免“安装时成功、下次打开才坏”的情况。
 
 如果 macOS 的“应用管理/App Management”拦截 App 直接修改 Docker，请改用 DMG 内的 PKG 安装包。
 
@@ -100,6 +100,8 @@ chmod +x install.sh rollback.sh build-dmg.sh build-app.sh
 ```bash
 ./install.sh --no-restart
 ```
+
+`--no-restart` 会跳过 Docker Desktop 前端重启验证，只适合已经确认当前 Docker Desktop 版本兼容时使用。给其他 Mac 分发时，建议使用默认安装模式。
 
 恢复最近备份：
 

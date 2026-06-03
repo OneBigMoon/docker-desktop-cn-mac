@@ -74,7 +74,7 @@ if [ ! -d "$APP" ]; then
   exit 1
 fi
 
-DOCKER_CN_PATCHER_PROGRESS=1 "$INSTALL" --app "$APP" --no-restart >> "$LOG" 2>&1
+DOCKER_CN_PATCHER_PROGRESS=1 "$INSTALL" --app "$APP" >> "$LOG" 2>&1
 
 echo "==== DockerCN Patcher postinstall done $(date) ====" >> "$LOG"
 exit 0

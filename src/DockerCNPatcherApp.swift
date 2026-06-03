@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = root
 
         let title = makeLabel("Docker Desktop 汉化补丁", size: 24, weight: .bold)
-        let subtitle = makeLabel("先备份原始 Docker，再注入中文补丁；安装时会请求管理员权限，失败会自动回退，也支持手动恢复原始 Docker。", size: 13, color: .secondaryLabelColor)
+        let subtitle = makeLabel("先备份原始 Docker，再注入中文补丁；安装时会短暂关闭并重新打开 Docker Desktop 前端，验证失败会自动回退，也支持手动恢复原始 Docker。", size: 13, color: .secondaryLabelColor)
 
         statusLabel = makeLabel("准备就绪", size: 16, weight: .semibold)
         detailLabel = makeLabel("目标：\(dockerAppPath)", size: 12, color: .secondaryLabelColor)
@@ -215,7 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func installPatch() {
-        runWithPermissionCheck(scriptArguments: ["--app", dockerAppPath, "--no-restart"], initialStatus: "开始安装汉化补丁", initialProgress: 5)
+        runWithPermissionCheck(scriptArguments: ["--app", dockerAppPath], initialStatus: "开始安装汉化补丁", initialProgress: 5)
     }
 
     @objc private func restoreLatest() {

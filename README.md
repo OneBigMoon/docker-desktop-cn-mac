@@ -27,9 +27,9 @@
 
 3. 按 macOS Installer 提示输入管理员密码。
 
-4. 安装完成后，重新打开 Docker Desktop 前端，或等待 Docker Desktop 自己刷新界面。
+4. 安装器会短暂关闭并重新唤醒 Docker Desktop，确认没有崩溃且 Docker Engine 正常后才算成功。
 
-说明：安装默认不会主动重启 Docker Desktop，也不会中断 Docker Engine。
+说明：默认安装会验证下一次启动是否出现崩溃；如果验证失败，会自动恢复安装前备份，避免“当时成功、下次打不开”的情况。命令行仍保留 `--no-restart` 高级选项，但不建议给未知 Docker 版本使用。
 
 ## DMG 里面有什么
 
@@ -129,6 +129,8 @@ dist/
 ```bash
 ./install.sh --app "/Applications/Docker.app" --no-restart
 ```
+
+`--no-restart` 会跳过 Docker Desktop 前端重启验证，只适合你已经确认当前 Docker Desktop 版本可用时使用。正式分发给其他 Mac 时，建议使用默认安装模式。
 
 完整安装并启动检查：
 

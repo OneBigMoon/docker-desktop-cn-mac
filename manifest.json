@@ -1,7 +1,7 @@
 {
   "name": "docker-desktop-cn-patcher",
   "displayName": "Docker Desktop CN Patcher",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "target": "Docker Desktop for Mac",
   "testedVersions": [
     "4.74.0 layout fallback pending",
@@ -33,7 +33,8 @@
     "Administrator permission prompt with system usage description",
     "Ad-hoc signed app bundle for stable macOS permission identity",
     "Bundled Python ASAR extractor/packer, no Node.js or npx required for users",
-    "No-restart install mode for GUI installs",
+    "Safe default install mode that relaunches Docker Desktop and checks for crashes plus Docker Engine availability",
+    "Advanced no-restart CLI mode for users who accept delayed launch-risk checks",
     "Automatic backup before patching",
     "Automatic rollback on patch or startup failure where startup checks are enabled",
     "Manual restore original Docker from GUI or CLI",

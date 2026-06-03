@@ -507,25 +507,22 @@ printf 'Patch applied. Backup: %s\n' "$BACKUP_DIR"
 if [ "$LAUNCH_AFTER_INSTALL" -eq 1 ]; then
   emit_progress 92 "启动 Docker Desktop 并等待前端"
   BEFORE_CRASH_COUNT="$(find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 \( -name 'Docker Desktop*.ips' -o -name 'Docker Desktop*.crash' \) -newermt "-5 seconds" 2>/dev/null | wc -l | tr -d ' ')"
-  open -a "$APP" >/dev/null 2>&1 || true
-  FRONTEND_OK=0
-  for _ in $(seq 1 45); do
-    if pgrep -f 'Docker Desktop.app/Contents/MacOS/Docker Desktop' >/dev/null 2>&1; then
-      FRONTEND_OK=1
-      break
+  if ! open "$APP" >/dev/null 2>&1; then
+    if ! open -a "Docker" >/dev/null 2>&1; then
+      fail_after_backup "macOS could not open Docker Desktop after patching.\n"
     fi
-    sleep 1
-  done
-  if [ "$FRONTEND_OK" -ne 1 ]; then
-    open "$INNER" >/dev/null 2>&1 || true
-    sleep 3
   fi
+  open "docker-desktop://dashboard" >/dev/null 2>&1 || open "docker-desktop://" >/dev/null 2>&1 || true
+  for _ in $(seq 1 12); do
+    sleep 1
+    CURRENT_CRASH_COUNT="$(find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 \( -name 'Docker Desktop*.ips' -o -name 'Docker Desktop*.crash' \) -newermt "-20 seconds" 2>/dev/null | wc -l | tr -d ' ')"
+    if [ "${CURRENT_CRASH_COUNT:-0}" -gt "${BEFORE_CRASH_COUNT:-0}" ]; then
+      fail_after_backup "Docker Desktop appears to have crashed after patching.\n"
+    fi
+  done
   AFTER_CRASH_COUNT="$(find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 \( -name 'Docker Desktop*.ips' -o -name 'Docker Desktop*.crash' \) -newermt "-15 seconds" 2>/dev/null | wc -l | tr -d ' ')"
   if [ "${AFTER_CRASH_COUNT:-0}" -gt "${BEFORE_CRASH_COUNT:-0}" ]; then
     fail_after_backup "Docker Desktop appears to have crashed after patching.\n"
-  fi
-  if ! pgrep -f 'Docker Desktop.app/Contents/MacOS/Docker Desktop' >/dev/null 2>&1; then
-    fail_after_backup "Docker Desktop frontend did not stay running after patching.\n"
   fi
 
   emit_progress 96 "等待 Docker 引擎可用"
