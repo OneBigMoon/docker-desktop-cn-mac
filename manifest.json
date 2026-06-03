@@ -1,16 +1,17 @@
 {
   "name": "docker-desktop-cn-patcher",
   "displayName": "Docker Desktop CN Patcher",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "target": "Docker Desktop for Mac",
   "testedVersions": [
-    "4.69.0"
+    "4.69.0",
+    "4.76.0"
   ],
   "compatibleVersionRules": [
     {
       "range": "4.x",
       "level": "best-effort",
-      "notes": "Uses runtime injection and guarded string replacements. Newer Docker Desktop releases may need extra dictionary entries."
+      "notes": "Uses runtime injection, guarded string replacements, backup, and startup crash rollback. Newer Docker Desktop releases may need extra dictionary entries or a new injection strategy."
     }
   ],
   "files": {

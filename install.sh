@@ -9,9 +9,11 @@ BACKUP_ROOT="$HOME/.docker-desktop-cn-patcher/backups"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="$BACKUP_ROOT/$STAMP"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/docker-cn-patcher.XXXXXX")"
+LAUNCH_AFTER_INSTALL=1
+AUTO_ROLLBACK=1
 
 usage() {
-  printf 'Usage: %s [--app /Applications/Docker.app]\n' "$0"
+  printf 'Usage: %s [--app /Applications/Docker.app] [--no-launch] [--no-auto-rollback]\n' "$0"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -19,6 +21,14 @@ while [ "$#" -gt 0 ]; do
     --app)
       APP="${2:-}"
       shift 2
+      ;;
+    --no-launch)
+      LAUNCH_AFTER_INSTALL=0
+      shift
+      ;;
+    --no-auto-rollback)
+      AUTO_ROLLBACK=0
+      shift
       ;;
     -h|--help)
       usage
@@ -53,6 +63,23 @@ need_file "$PATCH_JS"
 need_file "$MANIFEST"
 need_file "$INNER_INFO"
 need_file "$ASAR"
+
+restore_backup() {
+  if [ -f "$BACKUP_DIR/app.asar" ] && [ -f "$BACKUP_DIR/Info.plist" ]; then
+    printf 'Restoring backup because the patch did not pass the startup check...\n' >&2
+    cp "$BACKUP_DIR/app.asar" "$ASAR"
+    cp "$BACKUP_DIR/Info.plist" "$INNER_INFO"
+    xattr -cr "$APP"
+  fi
+}
+
+fail_after_backup() {
+  printf '%s\n' "$1" >&2
+  if [ "$AUTO_ROLLBACK" -eq 1 ]; then
+    restore_backup
+  fi
+  exit 1
+}
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INNER_INFO" 2>/dev/null || true)"
 if [ -z "$VERSION" ]; then
@@ -90,7 +117,10 @@ mkdir -p "$ASSETS_DIR"
 cp "$PATCH_JS" "$TARGET_JS"
 
 if ! /usr/bin/grep -q 'assets/cn-patch.js' "$HTML"; then
-  perl -0pi -e 's#(<script type="module" crossorigin src="/assets/[^"]+\\.js"></script>)#$1\n    <script type="module" crossorigin src="/assets/cn-patch.js"></script>#s' "$HTML"
+  perl -0pi -e 's#(<script\b[^>]*\btype="module"[^>]*\bsrc="/assets/[^"]+\.js"[^>]*></script>)#$1\n    <script type="module" crossorigin src="/assets/cn-patch.js"></script>#s' "$HTML"
+  if ! /usr/bin/grep -q 'assets/cn-patch.js' "$HTML"; then
+    fail_after_backup "Could not find a safe script injection point in $HTML"
+  fi
 fi
 
 if [ -f "$ENTRY" ]; then
@@ -106,7 +136,16 @@ if /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity:Resources/app.asar:h
 fi
 
 xattr -cr "$APP"
-open -a "$APP"
 
 printf 'Patch applied. Backup: %s\n' "$BACKUP_DIR"
 
+if [ "$LAUNCH_AFTER_INSTALL" -eq 1 ]; then
+  BEFORE_CRASH_COUNT="$(find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 \( -name 'Docker Desktop*.ips' -o -name 'Docker Desktop*.crash' \) -newermt "-5 seconds" 2>/dev/null | wc -l | tr -d ' ')"
+  open -a "$APP"
+  sleep 8
+  AFTER_CRASH_COUNT="$(find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 \( -name 'Docker Desktop*.ips' -o -name 'Docker Desktop*.crash' \) -newermt "-15 seconds" 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "${AFTER_CRASH_COUNT:-0}" -gt "${BEFORE_CRASH_COUNT:-0}" ]; then
+    fail_after_backup "Docker Desktop appears to have crashed after patching."
+  fi
+  printf 'Docker Desktop launch requested.\n'
+fi
