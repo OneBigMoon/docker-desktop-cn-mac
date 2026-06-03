@@ -1,7 +1,7 @@
 {
   "name": "docker-desktop-cn-patcher",
   "displayName": "Docker Desktop CN Patcher",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "target": "Docker Desktop for Mac",
   "testedVersions": [
     "4.74.0 layout fallback pending",
@@ -30,8 +30,8 @@
   "nativeReplacements": [],
   "features": [
     "Native macOS GUI with progress and logs",
-    "DMG-first distribution: users open DockerCN-Patcher.app directly and watch progress logs",
-    "Terminal-backed privileged installer path to satisfy macOS App Management prompts",
+    "Safety hotfix: GUI install is disabled to avoid invalidating Docker Desktop signatures",
+    "Restore original Docker from GUI or CLI",
     "Administrator permission prompt with system usage description",
     "Ad-hoc signed app bundle for stable macOS permission identity",
     "Bundled Python ASAR extractor/packer, no Node.js or npx required for users",

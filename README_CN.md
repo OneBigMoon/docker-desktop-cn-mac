@@ -1,22 +1,22 @@
 # Docker Desktop CN Patcher（通用版）
 
-这是一个面向 macOS 的 Docker Desktop 汉化补丁包。目标是：双击安装、自动备份、失败可恢复，并尽量兼容 Docker Desktop 4.x 后续版本。
+这是一个面向 macOS 的 Docker Desktop 汉化补丁包。当前安全热修版已暂停写入 Docker.app，避免破坏 Docker Desktop 官方签名；主要用于恢复原始 Docker、查看备份和收集日志。
 
 ## 推荐安装方式（DMG 图形 App，给其他 Mac 使用）
 
 1. 打开 DMG
 2. 双击 `DockerCN-Patcher.app`
-3. 点击“安装 / 重新汉化”
+3. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”
 4. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码
 5. 不要关闭窗口，下方会实时显示进度和日志
 
-这是推荐分发方式：用户只需要打开 DMG 里的 App，就能看到检测、备份、注入、启动检查和错误日志。
+这是推荐分发方式：用户只需要打开 DMG 里的 App，就能恢复原始 Docker、查看备份和错误日志。
 
 ## 可视化工具（App）
 
 1. 打开 `DockerCN-Patcher.app`
-2. 点击“安装 / 重新汉化”
-3. 按提示输入 macOS 管理员密码
+2. 当前“安装”已暂停
+3. 如需修复打不开的问题，点击“恢复原始 Docker”
 4. 等待进度到 100%，窗口下方会持续显示日志
 
 图形 App 和 PKG 默认使用安全验证模式：先备份，再写入补丁，然后短暂关闭并重新唤醒 Docker Desktop；确认没有崩溃且 Docker Engine 正常后才算成功。如果验证失败，会自动恢复安装前备份，避免“安装时成功、下次打开才坏”的情况。

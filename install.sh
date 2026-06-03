@@ -14,12 +14,13 @@ AUTO_ROLLBACK=1
 NO_RESTART=0
 RESTORE_LATEST=0
 RESTORE_BACKUP_DIR=""
+ALLOW_UNSAFE_PATCH=0
 BACKUP_READY=0
 PATCH_SUCCEEDED=0
 ROLLING_BACK=0
 
 usage() {
-  printf 'Usage: %s [--app /Applications/Docker.app] [--no-launch] [--no-restart] [--no-auto-rollback]\n' "$0"
+  printf 'Usage: %s [--app /Applications/Docker.app] [--no-launch] [--no-restart] [--no-auto-rollback] [--allow-unsafe-patch]\n' "$0"
   printf '       %s --restore-latest [--app /Applications/Docker.app]\n' "$0"
   printf '       %s --restore-backup <backup-folder> [--app /Applications/Docker.app]\n' "$0"
   printf '       %s --list-backups\n' "$0"
@@ -64,6 +65,10 @@ while [[ "$#" -gt 0 ]]; do
       ;;
     --no-auto-rollback)
       AUTO_ROLLBACK=0
+      shift
+      ;;
+    --allow-unsafe-patch)
+      ALLOW_UNSAFE_PATCH=1
       shift
       ;;
     -h|--help)
@@ -235,6 +240,27 @@ case "$VERSION" in
     printf 'Detected Docker Desktop %s. This patcher is best-effort mode for unknown versions.\n' "$VERSION"
     ;;
 esac
+
+if [ "$ALLOW_UNSAFE_PATCH" -ne 1 ]; then
+  emit_progress 18 "安全保护：已暂停写入 Docker.app"
+  cat >&2 <<'EOF'
+Refusing to patch Docker.app in safe mode.
+
+Reason:
+  Modifying Docker Desktop's app.asar or Info.plist invalidates Docker Desktop's
+  signed inner Electron app on recent macOS/Docker Desktop versions. This can
+  make the Docker Desktop UI fail to launch even when the Docker Engine keeps
+  running.
+
+What to do now:
+  - To recover Docker Desktop, run:
+      ./install.sh --restore-latest --app /Applications/Docker.app
+  - For this safety release, GUI install is intentionally disabled.
+  - Do not use --allow-unsafe-patch unless you are developing and can restore
+    Docker.app from a known-clean backup or reinstall Docker Desktop.
+EOF
+  exit 1
+fi
 
 emit_progress 15 "检测到 Docker Desktop $VERSION"
 emit_progress 18 "检查 Docker.app 写入权限"

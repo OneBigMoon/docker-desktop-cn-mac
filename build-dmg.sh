@@ -12,14 +12,17 @@ trap cleanup EXIT
 mkdir -p "$OUT_DIR"
 cp -R "$ROOT/build/DockerCN-Patcher.app" "$STAGE/DockerCN-Patcher.app"
 cat > "$STAGE/使用说明.txt" <<'TXT'
-Docker Desktop 汉化补丁
+Docker Desktop 汉化补丁安全热修版
+
+当前状态：
+此版本已暂停写入 Docker.app，避免破坏 Docker Desktop 官方签名。
+如果 Docker Desktop 打不开，请使用“恢复原始 Docker”。
 
 推荐用法：
 1. 双击 DockerCN-Patcher.app。
-2. 点击“安装 / 重新汉化”。
+2. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”。
 3. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码。
 4. 不要关闭窗口，下方会实时显示进度和日志。
-5. 显示“完成”后再打开 Docker Desktop 查看汉化效果。
 
 如果失败：
 1. 窗口会显示失败阶段和错误原因。

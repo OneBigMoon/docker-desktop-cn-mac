@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = root
 
         let title = makeLabel("Docker Desktop 汉化补丁", size: 24, weight: .bold)
-        let subtitle = makeLabel("直接从 DMG 打开即可使用：先备份原始 Docker，再注入中文补丁；下方会实时显示进度和日志，失败会自动回退。", size: 13, color: .secondaryLabelColor)
+        let subtitle = makeLabel("安全热修版：已暂停写入 Docker.app，避免破坏 Docker Desktop 官方签名；当前只建议用于恢复原始 Docker 和查看备份。", size: 13, color: .secondaryLabelColor)
 
         statusLabel = makeLabel("准备就绪", size: 16, weight: .semibold)
         detailLabel = makeLabel("目标：\(dockerAppPath)", size: 12, color: .secondaryLabelColor)
@@ -71,9 +71,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         progress.controlSize = .large
         progress.translatesAutoresizingMaskIntoConstraints = false
 
-        installButton = NSButton(title: "安装 / 重新汉化", target: self, action: #selector(installPatch))
+        installButton = NSButton(title: "安装已暂停", target: self, action: #selector(installPatch))
         installButton.bezelStyle = .rounded
         installButton.keyEquivalent = "\r"
+        installButton.isEnabled = false
 
         restoreButton = NSButton(title: "恢复原始 Docker", target: self, action: #selector(restoreLatest))
         restoreButton.bezelStyle = .rounded
@@ -169,8 +170,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let permissionText = "安装时会请求管理员权限"
             detailLabel.stringValue = "目标：\(dockerAppPath)  |  当前版本：\(version)  |  \(permissionText)"
             appendLog("已检测到 Docker Desktop：\(version)")
-            appendLog("权限状态：\(permissionText)")
-            appendLog("使用方法：点击“安装 / 重新汉化”，授权后在这里查看实时进度和日志。")
+            appendLog("安全提示：当前版本已暂停安装汉化补丁，避免破坏 Docker Desktop 官方签名。")
+            appendLog("如果 Docker Desktop 打不开，请点击“恢复原始 Docker”。")
+            installButton.isEnabled = false
         } else {
             statusLabel.stringValue = "未找到 Docker Desktop"
             detailLabel.stringValue = "请先把 Docker.app 安装到 /Applications。"
@@ -570,7 +572,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let log = logView.string.lowercased()
         var hint = "失败阶段：\(lastStage)\n退出码：\(exitCode)"
 
-        if log.contains("cannot write to docker.app resources") || log.contains("operation not permitted") || log.contains("permission denied") || log.contains("read-only file system") {
+        if log.contains("refusing to patch docker.app in safe mode") {
+            hint += "\n可能原因：安全热修版已暂停写入 Docker.app，避免破坏 Docker Desktop 官方签名。请使用“恢复原始 Docker”。"
+        } else if log.contains("cannot write to docker.app resources") || log.contains("operation not permitted") || log.contains("permission denied") || log.contains("read-only file system") {
             hint += "\n可能原因：macOS 的“应用管理/App Management”拦截了对 Docker.app 的写入。请到“系统设置 > 隐私与安全性 > 应用管理”允许 Terminal 修改应用，然后重新点击安装。"
         } else if log.contains("could not locate app.asar") || log.contains("could not find a desktop ui html") {
             hint += "\n可能原因：这个 Docker Desktop 版本的资源结构变化较大，需要适配新的 app.asar 路径或入口文件。"
