@@ -1,4 +1,6 @@
 dist/
+build/
+DockerCN-Patcher.app/
 .DS_Store
 node_modules/
 npm-debug.log*

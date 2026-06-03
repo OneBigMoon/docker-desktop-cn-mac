@@ -1,35 +1,31 @@
 {
   "name": "docker-desktop-cn-patcher",
   "displayName": "Docker Desktop CN Patcher",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "target": "Docker Desktop for Mac",
   "testedVersions": [
-    "4.69.0",
     "4.76.0"
   ],
   "compatibleVersionRules": [
     {
       "range": "4.x",
       "level": "best-effort",
-      "notes": "Uses runtime injection, guarded string replacements, backup, and startup crash rollback. Newer Docker Desktop releases may need extra dictionary entries or a new injection strategy."
+      "notes": "Generic runtime-first injection: finds index.html entry and bundle assets with fallback heuristics. Newer Docker releases may need new dictionary entries only, while patch flow remains reusable."
     }
   ],
   "files": {
     "uiPatch": "assets/cn-patch.js"
   },
-  "nativeReplacements": [
-    {
-      "fileHint": "build/entry-cli.main.js",
-      "replacements": [
-        {
-          "from": "label:\"变基\"",
-          "to": "label:\"编辑\""
-        },
-        {
-          "from": "label:'变基'",
-          "to": "label:'编辑'"
-        }
-      ]
-    }
+  "nativeReplacements": [],
+  "features": [
+    "Native macOS GUI with progress and logs",
+    "Administrator permission prompt with system usage description",
+    "Ad-hoc signed app bundle for stable macOS permission identity",
+    "Bundled Python ASAR extractor/packer, no Node.js or npx required for users",
+    "No-restart install mode for GUI installs",
+    "Automatic backup before patching",
+    "Automatic rollback on patch or startup failure where startup checks are enabled",
+    "Manual restore original Docker from GUI or CLI",
+    "Best-effort Docker Desktop 4.x resource discovery"
   ]
 }
