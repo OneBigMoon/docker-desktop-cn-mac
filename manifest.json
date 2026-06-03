@@ -1,7 +1,7 @@
 {
   "name": "docker-desktop-cn-patcher",
   "displayName": "Docker Desktop CN Patcher",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "target": "Docker Desktop for Mac",
   "testedVersions": [
     "4.74.0 layout fallback pending",
@@ -31,6 +31,7 @@
   "features": [
     "Native macOS GUI with progress and logs",
     "Safety hotfix: GUI install is disabled to avoid invalidating Docker Desktop signatures",
+    "DMG includes a quarantine-clearing helper for macOS damaged-app warnings",
     "Restore original Docker from GUI or CLI",
     "Administrator permission prompt with system usage description",
     "Ad-hoc signed app bundle for stable macOS permission identity",

@@ -25,9 +25,15 @@
    DockerCN-Patcher.app
    ```
 
-3. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”。
+3. 如果 macOS 提示“已损坏，无法打开”，先双击 DMG 里的：
 
-4. 不要关闭窗口，下方会实时显示进度和日志。
+   ```text
+   如果提示已损坏请先运行.command
+   ```
+
+4. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”。
+
+5. 不要关闭窗口，下方会实时显示进度和日志。
 
 说明：默认安装会验证下一次启动是否出现崩溃；如果验证失败，会自动恢复安装前备份，避免“当时成功、下次打不开”的情况。命令行仍保留 `--no-restart` 高级选项，但不建议给未知 Docker 版本使用。
 
@@ -36,10 +42,18 @@
 ```text
 DockerCN-Patcher.app
 Applications
+如果提示已损坏请先运行.command
 使用说明.txt
 ```
 
 普通用户直接双击 `DockerCN-Patcher.app`。安全热修版默认禁用安装，只保留日志、备份目录和“恢复原始 Docker”按钮。
+
+如果提示 “DockerCN Patcher 已损坏”，通常是 macOS 对未公证下载 App 的 quarantine 隔离，不代表文件真的坏了。双击 DMG 里的 `如果提示已损坏请先运行.command`，或手动运行：
+
+```bash
+xattr -cr /Applications/DockerCN-Patcher.app
+open /Applications/DockerCN-Patcher.app
+```
 
 ## PKG 怎么处理
 
@@ -98,6 +112,24 @@ assets/cn-patch.js
 然后重新构建安装包。
 
 ## 从源码构建
+
+## Local experimental Chinese build
+
+This mode is disabled by default and is not recommended for normal testers:
+
+```bash
+./build-local-experimental.sh --unsafe-run-anyway --force
+```
+
+Reason: Docker Desktop has privileged virtualization, keychain, app group and launchd requirements tied to Docker's official signing chain. A re-signed copy can fail to launch even when `codesign` verification passes.
+
+Restore the original launch path:
+
+```bash
+./build-local-experimental.sh --restore
+```
+
+This is kept only for disposable-machine debugging. Do not ask normal testers to run it.
 
 构建 App：
 

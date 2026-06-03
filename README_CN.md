@@ -6,11 +6,31 @@
 
 1. 打开 DMG
 2. 双击 `DockerCN-Patcher.app`
-3. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”
-4. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码
-5. 不要关闭窗口，下方会实时显示进度和日志
+3. 如果提示“已损坏，无法打开”，先双击 DMG 里的 `如果提示已损坏请先运行.command`
+4. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”
+5. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码
+6. 不要关闭窗口，下方会实时显示进度和日志
 
 这是推荐分发方式：用户只需要打开 DMG 里的 App，就能恢复原始 Docker、查看备份和错误日志。
+
+## 如果提示“DockerCN Patcher 已损坏”
+
+这是 macOS 对下载的未公证 App 加了 quarantine 隔离标记，不代表文件真的坏了。
+
+优先做法：双击 DMG 里的：
+
+```text
+如果提示已损坏请先运行.command
+```
+
+它只会清除 `DockerCN-Patcher.app` 的隔离标记，然后重新打开补丁器；不会修改 `/Applications/Docker.app`。
+
+如果已经拖到 Applications，也可以手动运行：
+
+```bash
+xattr -cr /Applications/DockerCN-Patcher.app
+open /Applications/DockerCN-Patcher.app
+```
 
 ## 可视化工具（App）
 
@@ -126,6 +146,31 @@ chmod +x install.sh rollback.sh build-dmg.sh build-app.sh
 
 ## 构建 App 和 DMG
 
+## 本机实验版汉化（已暂停）
+
+这个方案已经暂停，不再推荐给别人测试：
+
+```bash
+./build-local-experimental.sh --unsafe-run-anyway --force
+```
+
+原因：Docker Desktop 不只是普通 Electron App，它还包含虚拟化、keychain、app group 和 launchd 相关权限。实测复制成 `/Applications/DockerCN.app` 后重新签名，即使 `codesign` 验证通过，也可能被 macOS launchd 拒绝启动。
+
+如果之前运行过实验版，恢复原版启动路径：
+
+```bash
+./build-local-experimental.sh --restore
+```
+
+实验版原本会：
+
+- 复制 `/Applications/Docker.app` 到 `/Applications/DockerCN.app`
+- 只修改 `DockerCN.app`，不修改原版 Docker
+- 对 `DockerCN.app` 做本机 ad-hoc 重签名
+- 将 Docker Desktop 启动路径临时切到 `/Applications/DockerCN.app`
+
+注意：仅保留给 disposable 测试机调试，不适合普通用户。
+
 构建原生安装 App：
 
 ```bash
@@ -154,6 +199,7 @@ DMG 内包含：
 
 - `DockerCN-Patcher.app`
 - `Applications` 快捷方式
+- `如果提示已损坏请先运行.command`
 - `使用说明.txt`
 
 普通用户直接双击 App 安装；App 可用于查看日志、手动恢复原始 Docker、打开备份目录。

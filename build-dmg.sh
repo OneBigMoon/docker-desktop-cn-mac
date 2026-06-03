@@ -11,6 +11,48 @@ trap cleanup EXIT
 "$ROOT/build-app.sh"
 mkdir -p "$OUT_DIR"
 cp -R "$ROOT/build/DockerCN-Patcher.app" "$STAGE/DockerCN-Patcher.app"
+cat > "$STAGE/如果提示已损坏请先运行.command" <<'SH'
+#!/bin/bash
+set -u
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+DMG_APP="$DIR/DockerCN-Patcher.app"
+INSTALLED_APP="/Applications/DockerCN-Patcher.app"
+
+echo "DockerCN Patcher - 解除 macOS 已损坏提示"
+echo
+echo "这一步只会清除 DockerCN-Patcher.app 的下载隔离标记。"
+echo "不会修改 /Applications/Docker.app，也不会删除容器、镜像或设置。"
+echo
+
+clear_app() {
+  local app="$1"
+  if [ -d "$app" ]; then
+    echo "处理: $app"
+    /usr/bin/xattr -cr "$app" 2>/dev/null || /usr/bin/xattr -dr com.apple.quarantine "$app" 2>/dev/null || true
+  fi
+}
+
+clear_app "$DMG_APP"
+clear_app "$INSTALLED_APP"
+
+echo
+echo "处理完成，正在打开补丁器..."
+if [ -d "$DMG_APP" ]; then
+  /usr/bin/open "$DMG_APP"
+elif [ -d "$INSTALLED_APP" ]; then
+  /usr/bin/open "$INSTALLED_APP"
+else
+  echo "没有找到 DockerCN-Patcher.app。请确认 DMG 仍然打开。"
+fi
+
+echo
+echo "如果仍然看到“已损坏”，请把 DockerCN-Patcher.app 拖到 Applications 后，再运行："
+echo "xattr -cr /Applications/DockerCN-Patcher.app"
+echo
+echo "可以关闭这个 Terminal 窗口。"
+SH
+chmod +x "$STAGE/如果提示已损坏请先运行.command"
 cat > "$STAGE/使用说明.txt" <<'TXT'
 Docker Desktop 汉化补丁安全热修版
 
@@ -20,9 +62,10 @@ Docker Desktop 汉化补丁安全热修版
 
 推荐用法：
 1. 双击 DockerCN-Patcher.app。
-2. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”。
-3. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码。
-4. 不要关闭窗口，下方会实时显示进度和日志。
+2. 如果提示“DockerCN Patcher 已损坏”，先双击“如果提示已损坏请先运行.command”。
+3. 如果 Docker Desktop 打不开，点击“恢复原始 Docker”。
+4. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码。
+5. 不要关闭窗口，下方会实时显示进度和日志。
 
 如果失败：
 1. 窗口会显示失败阶段和错误原因。
@@ -36,6 +79,7 @@ Docker Desktop 汉化补丁安全热修版
 - 恢复不会删除容器、镜像、卷或 Docker 设置。
 - 如果 Terminal 提示输入密码，输入时不会显示字符，这是 macOS 正常行为。
 - 如果 macOS 提示 Terminal 想修改应用，请允许。
+- “已损坏”通常是 macOS 给下载的未公证 App 加了隔离标记，不代表补丁器文件真的坏了。
 TXT
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "Docker Desktop CN Patcher" -srcfolder "$STAGE" -ov -format UDZO "$OUT"
