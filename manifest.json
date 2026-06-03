@@ -1,16 +1,27 @@
 {
   "name": "docker-desktop-cn-patcher",
   "displayName": "Docker Desktop CN Patcher",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "target": "Docker Desktop for Mac",
   "testedVersions": [
+    "4.74.0 layout fallback pending",
     "4.76.0"
   ],
   "compatibleVersionRules": [
     {
+      "range": "4.76.x+",
+      "level": "tested",
+      "notes": "UI entry found inside app.asar; patch mode: asar."
+    },
+    {
+      "range": "4.74.x",
+      "level": "best-effort",
+      "notes": "Some builds do not include desktop UI HTML in app.asar; patcher now falls back to external Resources/app.asar.unpacked style UI entries."
+    },
+    {
       "range": "4.x",
       "level": "best-effort",
-      "notes": "Generic runtime-first injection: finds index.html entry and bundle assets with fallback heuristics. Newer Docker releases may need new dictionary entries only, while patch flow remains reusable."
+      "notes": "Detect version and UI resource layout before patching. Abort and restore if no known UI entry can be found."
     }
   ],
   "files": {

@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- 已测试 Docker Desktop：`4.76.0`
+- 已测试 Docker Desktop：`4.76.0`；`4.74.0` 已新增外部 UI 资源 fallback，需要异机复测
 - 兼容策略：Docker Desktop `4.x` 尽力兼容
 - 默认安装方式：`PKG` 安装包
 - 默认安装行为：先备份，再汉化，不主动重启 Docker Desktop
@@ -22,7 +22,7 @@
 2. 双击安装包：
 
    ```text
-   DockerDesktop-CN-Patcher-0.4.1.pkg
+   DockerDesktop-CN-Patcher-0.4.2.pkg
    ```
 
 3. 按 macOS Installer 提示输入管理员密码。
@@ -35,7 +35,7 @@
 
 ```text
 DockerCN-Patcher.app
-DockerDesktop-CN-Patcher-0.4.1.pkg
+DockerDesktop-CN-Patcher-0.4.2.pkg
 Applications
 使用说明.txt
 ```

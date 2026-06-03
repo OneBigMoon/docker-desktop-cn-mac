@@ -27,7 +27,7 @@
 
 ## 给别人测试建议
 
-发给别人测试时，建议直接发 DMG，并让对方优先双击 `DockerDesktop-CN-Patcher-0.4.1.pkg`。
+发给别人测试时，建议直接发 DMG，并让对方优先双击 `DockerDesktop-CN-Patcher-0.4.2.pkg`。
 
 原因：macOS 对普通 App 修改 `/Applications` 里的其他 App 有“应用管理/App Management”限制；PKG 由系统 Installer 执行，授权链路更稳定。
 
@@ -78,7 +78,7 @@ PKG 会通过 macOS Installer 获取管理员权限，是推荐路径。图形 A
 
 ## 支持范围
 
-- 已验证：`4.76.0`
+- 已验证：`4.76.0`；`4.74.0` 已新增外部 UI 资源 fallback，需要异机复测
 - 兼容策略：Docker Desktop `4.x` 使用通用 best-effort 注入
 - 说明：Docker 更新后通常只需要重新运行补丁；如果新版新增英文文案，需要补充 `assets/cn-patch.js` 词典。
 

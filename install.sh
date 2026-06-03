@@ -113,6 +113,7 @@ restore_backup() {
   local dir="$1"
   local backup_asar="$dir/app.asar"
   local backup_info="$dir/Info.plist"
+  local external_manifest="$dir/external-files.tsv"
 
   if [ -z "$dir" ]; then
     echo "No backup directory specified." >&2
@@ -134,6 +135,24 @@ restore_backup() {
   emit_progress 30 "正在恢复备份文件"
   cp "$backup_asar" "$ASAR"
   cp "$backup_info" "$INNER_INFO"
+  if [ -f "$external_manifest" ]; then
+    while IFS=$'\t' read -r action backup_name target_path; do
+      if [ -z "${action:-}" ] || [ -z "${target_path:-}" ]; then
+        continue
+      fi
+      case "$action" in
+        file)
+          if [ -f "$dir/external/$backup_name" ]; then
+            mkdir -p "$(dirname "$target_path")"
+            cp "$dir/external/$backup_name" "$target_path"
+          fi
+          ;;
+        missing)
+          rm -f "$target_path"
+          ;;
+      esac
+    done < "$external_manifest"
+  fi
   xattr -cr "$APP"
   emit_progress 100 "恢复完成"
   echo "Restored backup: $dir"
@@ -226,6 +245,26 @@ printf '%s\n' "$APP" > "$BACKUP_DIR/app-path.txt"
 printf '%s\n' "$VERSION" > "$BACKUP_DIR/version.txt"
 BACKUP_READY=1
 
+backup_external_file() {
+  local file="$1"
+  local backup_name
+  mkdir -p "$BACKUP_DIR/external"
+
+  backup_name="$(FILE_PATH="$file" python3 <<'PY'
+import hashlib
+import os
+print(hashlib.sha256(os.environ["FILE_PATH"].encode("utf-8")).hexdigest())
+PY
+)"
+
+  if [ -e "$file" ]; then
+    cp "$file" "$BACKUP_DIR/external/$backup_name"
+    printf 'file\t%s\t%s\n' "$backup_name" "$file" >> "$BACKUP_DIR/external-files.tsv"
+  else
+    printf 'missing\t%s\t%s\n' "$backup_name" "$file" >> "$BACKUP_DIR/external-files.tsv"
+  fi
+}
+
 if [ "$NO_RESTART" -eq 1 ]; then
   emit_progress 35 "保持 Docker Desktop 运行"
 else
@@ -252,6 +291,19 @@ find_entry_html() {
   fi
   if [ -z "$html" ]; then
     html="$(find "$WORK_DIR/app" -type f -name 'index.html' | sort | head -n 1 || true)"
+  fi
+  echo "$html"
+}
+
+find_external_entry_html() {
+  local html
+
+  html="$(find "$RESOURCES" -type f -path '*/desktop-ui-build/index.html' | sort | head -n 1 || true)"
+  if [ -z "$html" ]; then
+    html="$(find "$RESOURCES" -type f -path '*/desktop-ui/index.html' | sort | head -n 1 || true)"
+  fi
+  if [ -z "$html" ]; then
+    html="$(find "$RESOURCES" -type f -name 'index.html' | sort | head -n 1 || true)"
   fi
   echo "$html"
 }
@@ -295,15 +347,27 @@ find_bundle_assets_dir() {
 
 HTML="$(find_entry_html)"
 ENTRY="$(find_entry_file)"
+PATCH_MODE="asar"
 
 if [ -z "$HTML" ]; then
-  fail_after_backup "Could not find a desktop UI HTML entry in the extracted app.asar.\n"
+  HTML="$(find_external_entry_html)"
+  if [ -n "$HTML" ]; then
+    PATCH_MODE="external"
+    printf 'Could not find UI HTML in app.asar. Using external UI entry: %s\n' "$HTML"
+  else
+    fail_after_backup "Could not find a desktop UI HTML entry in app.asar or Resources.\n"
+  fi
 fi
 need_file "$HTML"
 
 ASSETS_DIR="$(find_bundle_assets_dir "$HTML")"
 mkdir -p "$ASSETS_DIR"
 TARGET_JS="$ASSETS_DIR/cn-patch.js"
+
+if [ "$PATCH_MODE" = "external" ]; then
+  backup_external_file "$HTML"
+  backup_external_file "$TARGET_JS"
+fi
 cp "$PATCH_JS" "$TARGET_JS"
 
 emit_progress 60 "注入中文语言补丁"
@@ -394,17 +458,18 @@ PY
 fi
 
 emit_progress 75 "重新打包资源"
-if [ -x "$PATCH_ROOT/scripts/asar.py" ]; then
-  "$PATCH_ROOT/scripts/asar.py" pack "$WORK_DIR/app" "$WORK_DIR/app.asar"
-elif command -v npx >/dev/null 2>&1; then
-  npx --yes @electron/asar pack "$WORK_DIR/app" "$WORK_DIR/app.asar"
-else
-  fail_after_backup "Could not find ASAR tool. Missing bundled scripts/asar.py and npx is not available.\n"
-fi
-cp "$WORK_DIR/app.asar" "$ASAR"
+if [ "$PATCH_MODE" = "asar" ]; then
+  if [ -x "$PATCH_ROOT/scripts/asar.py" ]; then
+    "$PATCH_ROOT/scripts/asar.py" pack "$WORK_DIR/app" "$WORK_DIR/app.asar"
+  elif command -v npx >/dev/null 2>&1; then
+    npx --yes @electron/asar pack "$WORK_DIR/app" "$WORK_DIR/app.asar"
+  else
+    fail_after_backup "Could not find ASAR tool. Missing bundled scripts/asar.py and npx is not available.\n"
+  fi
+  cp "$WORK_DIR/app.asar" "$ASAR"
 
-emit_progress 82 "更新 Electron ASAR 完整性校验"
-HASH="$(ASAR_PATH="$ASAR" python3 <<'PY'
+  emit_progress 82 "更新 Electron ASAR 完整性校验"
+  HASH="$(ASAR_PATH="$ASAR" python3 <<'PY'
 import hashlib
 import os
 import struct
@@ -424,11 +489,14 @@ with open(asar_path, "rb") as f:
         header_string = header_string[:-1]
     print(hashlib.sha256(header_string).hexdigest(), end="")
 PY
-)"
-if /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity:Resources/app.asar:hash' "$INNER_INFO" >/dev/null 2>&1; then
-  /usr/libexec/PlistBuddy -c "Set :ElectronAsarIntegrity:Resources/app.asar:hash $HASH" "$INNER_INFO"
-elif /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity' "$INNER_INFO" >/dev/null 2>&1; then
-  /usr/libexec/PlistBuddy -c "Set :ElectronAsarIntegrity:Resources:app.asar:hash $HASH" "$INNER_INFO"
+  )"
+  if /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity:Resources/app.asar:hash' "$INNER_INFO" >/dev/null 2>&1; then
+    /usr/libexec/PlistBuddy -c "Set :ElectronAsarIntegrity:Resources/app.asar:hash $HASH" "$INNER_INFO"
+  elif /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity' "$INNER_INFO" >/dev/null 2>&1; then
+    /usr/libexec/PlistBuddy -c "Set :ElectronAsarIntegrity:Resources:app.asar:hash $HASH" "$INNER_INFO"
+  fi
+else
+  emit_progress 82 "外部 UI 资源无需更新 ASAR 完整性校验"
 fi
 
 emit_progress 88 "清理 macOS 隔离属性"
