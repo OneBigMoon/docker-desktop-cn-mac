@@ -2,34 +2,35 @@
 
 这是一个面向 macOS 的 Docker Desktop 汉化补丁包。目标是：双击安装、自动备份、失败可恢复，并尽量兼容 Docker Desktop 4.x 后续版本。
 
-## 推荐安装方式（PKG，给其他 Mac 使用）
+## 推荐安装方式（DMG 图形 App，给其他 Mac 使用）
 
 1. 打开 DMG
-2. 双击 `DockerDesktop-CN-Patcher-版本号.pkg`
-3. 按 macOS Installer 提示输入管理员密码
-4. 安装器会自动备份原始 Docker，然后写入汉化补丁
+2. 双击 `DockerCN-Patcher.app`
+3. 点击“安装 / 重新汉化”
+4. App 会打开一个临时 Terminal 窗口，请在 Terminal 里输入管理员密码
+5. 不要关闭窗口，下方会实时显示进度和日志
 
-这是最稳的分发方式：授权由 macOS Installer 处理，通常一次授权即可完成安装。
+这是推荐分发方式：用户只需要打开 DMG 里的 App，就能看到检测、备份、注入、启动检查和错误日志。
 
 ## 可视化工具（App）
 
 1. 打开 `DockerCN-Patcher.app`
 2. 点击“安装 / 重新汉化”
 3. 按提示输入 macOS 管理员密码
-4. 等待进度到 100%，默认不会主动重启 Docker Desktop
+4. 等待进度到 100%，窗口下方会持续显示日志
 
 图形 App 和 PKG 默认使用安全验证模式：先备份，再写入补丁，然后短暂关闭并重新唤醒 Docker Desktop；确认没有崩溃且 Docker Engine 正常后才算成功。如果验证失败，会自动恢复安装前备份，避免“安装时成功、下次打开才坏”的情况。
 
-如果 macOS 的“应用管理/App Management”拦截 App 直接修改 Docker，请改用 DMG 内的 PKG 安装包。
+如果 Terminal 提示输入密码，输入时不会显示字符，这是 macOS 正常行为。如果 macOS 的“应用管理/App Management”提示 Terminal 想修改应用，请允许。后续通常只需要授权一次。
 
 说明：密码窗口是 macOS 系统授权框，本工具不会保存密码。
 
 
 ## 给别人测试建议
 
-发给别人测试时，建议直接发 DMG，并让对方优先双击 `DockerDesktop-CN-Patcher-0.4.2.pkg`。
+发给别人测试时，建议直接发 DMG，并让对方双击 `DockerCN-Patcher.app`。
 
-原因：macOS 对普通 App 修改 `/Applications` 里的其他 App 有“应用管理/App Management”限制；PKG 由系统 Installer 执行，授权链路更稳定。
+原因：图形 App 能显示实时进度和完整日志，用户反馈问题时更容易定位。
 
 测试反馈时请让对方提供：
 
@@ -52,6 +53,14 @@ App 窗口会显示当前失败阶段，例如：
 - 等待 Docker 引擎可用
 
 如果失败，窗口会显示错误原因提示，并保留日志。点击“打开日志”可以定位日志文件。
+
+如果失败阶段是“检查 Docker.app 写入权限”，说明 macOS 还没有允许 Terminal 修改其他应用：
+
+```text
+系统设置 > 隐私与安全性 > 应用管理 > 允许 Terminal
+```
+
+授权后重新点击“安装 / 重新汉化”即可。
 
 如果 Docker Desktop 打不开，点击 App 里的“恢复原始 Docker”。也可以使用命令行：
 
@@ -144,11 +153,10 @@ dist/DockerDesktop-CN-Patcher-YYYYMMDD.dmg
 DMG 内包含：
 
 - `DockerCN-Patcher.app`
-- `DockerDesktop-CN-Patcher-版本号.pkg`
 - `Applications` 快捷方式
 - `使用说明.txt`
 
-普通用户优先双击 PKG 安装；App 可用于查看日志、手动恢复原始 Docker、或在系统允许时可视化安装。
+普通用户直接双击 App 安装；App 可用于查看日志、手动恢复原始 Docker、打开备份目录。
 
 App 内已经内置 ASAR 解包/打包工具，不要求用户电脑预装 Node.js、npm 或 npx。
 

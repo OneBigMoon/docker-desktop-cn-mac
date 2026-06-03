@@ -237,6 +237,15 @@ case "$VERSION" in
 esac
 
 emit_progress 15 "检测到 Docker Desktop $VERSION"
+emit_progress 18 "检查 Docker.app 写入权限"
+WRITE_TEST_FILE="$RESOURCES/.docker-cn-patcher-write-test"
+WRITE_TEST_ERR="$WORK_DIR/write-permission.err"
+if ! ( : > "$WRITE_TEST_FILE" && rm -f "$WRITE_TEST_FILE" ) 2>"$WRITE_TEST_ERR"; then
+  printf 'Cannot write to Docker.app resources: %s\n' "$RESOURCES" >&2
+  cat "$WRITE_TEST_ERR" >&2 || true
+  printf 'macOS App Management may be blocking this runner. Please allow Terminal or this patcher to modify applications in System Settings > Privacy & Security > App Management, then run again.\n' >&2
+  exit 1
+fi
 emit_progress 25 "备份 Docker Desktop 原始文件"
 mkdir -p "$BACKUP_DIR"
 cp "$ASAR" "$BACKUP_DIR/app.asar"

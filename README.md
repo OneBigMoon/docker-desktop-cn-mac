@@ -6,8 +6,8 @@
 
 - 已测试 Docker Desktop：`4.76.0`；`4.74.0` 已新增外部 UI 资源 fallback，需要异机复测
 - 兼容策略：Docker Desktop `4.x` 尽力兼容
-- 默认安装方式：`PKG` 安装包
-- 默认安装行为：先备份，再汉化，不主动重启 Docker Desktop
+- 默认安装方式：打开 DMG 后直接运行 `DockerCN-Patcher.app`
+- 默认安装行为：先备份，再汉化，再唤醒 Docker Desktop 并检查崩溃和 Docker Engine
 - 失败保护：补丁写入失败会自动恢复最近备份
 - 手动恢复：支持一键恢复原始 Docker
 
@@ -19,15 +19,15 @@
    DockerDesktop-CN-Patcher-YYYYMMDD.dmg
    ```
 
-2. 双击安装包：
+2. 双击图形工具：
 
    ```text
-   DockerDesktop-CN-Patcher-0.4.2.pkg
+   DockerCN-Patcher.app
    ```
 
-3. 按 macOS Installer 提示输入管理员密码。
+3. 点击“安装 / 重新汉化”，App 会打开临时 Terminal 窗口，请在 Terminal 里输入管理员密码。
 
-4. 安装器会短暂关闭并重新唤醒 Docker Desktop，确认没有崩溃且 Docker Engine 正常后才算成功。
+4. 不要关闭窗口，下方会实时显示进度和日志；确认没有崩溃且 Docker Engine 正常后才算成功。
 
 说明：默认安装会验证下一次启动是否出现崩溃；如果验证失败，会自动恢复安装前备份，避免“当时成功、下次打不开”的情况。命令行仍保留 `--no-restart` 高级选项，但不建议给未知 Docker 版本使用。
 
@@ -35,18 +35,17 @@
 
 ```text
 DockerCN-Patcher.app
-DockerDesktop-CN-Patcher-0.4.2.pkg
 Applications
 使用说明.txt
 ```
 
-普通用户优先使用 `pkg` 安装。`DockerCN-Patcher.app` 主要用于可视化安装、查看日志、打开备份目录和恢复原始 Docker。
+普通用户直接双击 `DockerCN-Patcher.app`。窗口里会显示进度、日志、备份目录和“恢复原始 Docker”按钮。
 
-## 为什么推荐 PKG
+## PKG 怎么处理
 
-macOS 对普通 App 修改 `/Applications` 里的其他 App 有额外的“应用管理/App Management”限制。`pkg` 由系统 Installer 执行，授权链路更稳定，适合发给别人测试。
+`build-pkg.sh` 仍保留，适合作为备用安装包。但正式分发建议优先发 DMG，让用户直接打开图形 App，这样能看到进度和日志。
 
-图形 App 也支持安装，但如果被 macOS 拦截，请改用 `pkg`。
+如果 Terminal 提示输入密码，输入时不会显示字符，这是 macOS 正常行为。如果 macOS 拦截修改 `/Applications/Docker.app`，请到“系统设置 > 隐私与安全性 > 应用管理”允许 Terminal 修改应用，后续通常只需要授权一次。
 
 ## 备份与恢复
 

@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = root
 
         let title = makeLabel("Docker Desktop 汉化补丁", size: 24, weight: .bold)
-        let subtitle = makeLabel("先备份原始 Docker，再注入中文补丁；安装时会短暂关闭并重新打开 Docker Desktop 前端，验证失败会自动回退，也支持手动恢复原始 Docker。", size: 13, color: .secondaryLabelColor)
+        let subtitle = makeLabel("直接从 DMG 打开即可使用：先备份原始 Docker，再注入中文补丁；下方会实时显示进度和日志，失败会自动回退。", size: 13, color: .secondaryLabelColor)
 
         statusLabel = makeLabel("准备就绪", size: 16, weight: .semibold)
         detailLabel = makeLabel("目标：\(dockerAppPath)", size: 12, color: .secondaryLabelColor)
@@ -170,6 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             detailLabel.stringValue = "目标：\(dockerAppPath)  |  当前版本：\(version)  |  \(permissionText)"
             appendLog("已检测到 Docker Desktop：\(version)")
             appendLog("权限状态：\(permissionText)")
+            appendLog("使用方法：点击“安装 / 重新汉化”，授权后在这里查看实时进度和日志。")
         } else {
             statusLabel.stringValue = "未找到 Docker Desktop"
             detailLabel.stringValue = "请先把 Docker.app 安装到 /Applications。"
@@ -215,7 +216,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func installPatch() {
-        runWithPermissionCheck(scriptArguments: ["--app", dockerAppPath], initialStatus: "开始安装汉化补丁", initialProgress: 5)
+        runWithPermissionCheck(scriptArguments: ["--app", dockerAppPath], initialStatus: "等待管理员授权", initialProgress: 8)
     }
 
     @objc private func restoreLatest() {
@@ -228,13 +229,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if alert.runModal() != .alertFirstButtonReturn {
             return
         }
-        runWithPermissionCheck(scriptArguments: ["--restore-latest", "--app", dockerAppPath], initialStatus: "开始恢复原始 Docker", initialProgress: 5)
+        runWithPermissionCheck(scriptArguments: ["--restore-latest", "--app", dockerAppPath], initialStatus: "等待管理员授权", initialProgress: 8)
     }
 
     private func runWithPermissionCheck(scriptArguments: [String], initialStatus: String, initialProgress: Double) {
         let alert = NSAlert()
         alert.messageText = "需要管理员权限"
-        alert.informativeText = "补丁需要写入 /Applications/Docker.app。点击继续后，macOS 会弹出密码框；这是系统授权窗口，密码不会被本工具保存。"
+        alert.informativeText = "补丁需要写入 /Applications/Docker.app。点击继续后会打开一个临时 Terminal 窗口；请在 Terminal 里输入管理员密码，输入时不会显示字符，密码不会被本工具保存。"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "使用管理员权限继续")
         alert.addButton(withTitle: "取消")
@@ -274,10 +275,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appendLog("日志文件：\(logFileURL.path)")
         }
         setProgress(initialProgress, initialStatus)
-        appendLog(privileged ? "将请求 macOS 管理员权限执行。" : "当前用户权限足够，直接执行。")
-
-        let process = Process()
-        currentProcess = process
+        appendLog(privileged ? "将通过 Terminal 请求 macOS 管理员权限执行；授权后请不要关闭本窗口，日志会实时刷新。" : "当前用户权限足够，直接执行。")
 
         if privileged {
             guard let logFileURL else {
@@ -286,21 +284,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 setBusy(false)
                 return
             }
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", privilegedAppleScript(script: script, dir: dir, arguments: scriptArguments, logFile: logFileURL)]
-            startLogTail()
-        } else {
-            process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            process.arguments = [script.path] + scriptArguments
-            process.currentDirectoryURL = dir
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = pipe
-            pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-                let data = handle.availableData
-                guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
-                self?.consumeOutput(text)
-            }
+            runViaTerminal(script: script, dir: dir, arguments: scriptArguments, logFile: logFileURL)
+            return
+        }
+
+        let process = Process()
+        currentProcess = process
+
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [script.path] + scriptArguments
+        process.currentDirectoryURL = dir
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
+            self?.consumeOutput(text)
         }
 
         var environment = ProcessInfo.processInfo.environment
@@ -377,13 +377,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appendLog("Terminal 会打开一个临时窗口执行安装命令；GUI 会继续显示进度。")
 
         let launcher = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("docker-cn-patcher-\(UUID().uuidString).sh")
-        let adminScript = privilegedAppleScript(script: script, dir: dir, arguments: arguments, logFile: logFile)
+        let installCommand = [
+            "cd \(shellQuote(dir.path))",
+            "export DOCKER_CN_PATCHER_PROGRESS=1",
+            "export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+            "/usr/bin/sudo /bin/bash \(shellQuote(script.path)) \(arguments.map(shellQuote).joined(separator: " ")) >> \(shellQuote(logFile.path)) 2>&1"
+        ].joined(separator: " && ")
         let launcherBody = """
         #!/usr/bin/env bash
         set +e
         LOG=\(shellQuote(logFile.path))
         echo "::progress::8::等待管理员授权" >> "$LOG"
-        /usr/bin/osascript -e \(shellQuote(adminScript))
+        echo "Terminal 会提示输入管理员密码；输入时不会显示字符，这是 macOS 正常行为。" >> "$LOG"
+        \(installCommand)
         STATUS=$?
         echo "::terminal-exit::$STATUS" >> "$LOG"
         rm -f \(shellQuote(launcher.path))
@@ -554,7 +560,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installButton.isEnabled = !busy
         restoreButton.isEnabled = !busy
         backupButton.isEnabled = !busy
-        logButton.isEnabled = !busy && logFileURL != nil
+        logButton.isEnabled = logFileURL != nil
         if busy {
             progress.doubleValue = max(progress.doubleValue, 1)
         }
@@ -564,8 +570,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let log = logView.string.lowercased()
         var hint = "失败阶段：\(lastStage)\n退出码：\(exitCode)"
 
-        if log.contains("permission denied") || log.contains("operation not permitted") || log.contains("read-only file system") {
-            hint += "\n可能原因：macOS 拦截了对 Docker.app 的写入。请确认已输入管理员密码；如果仍失败，请到“系统设置 > 隐私与安全性 > 应用管理”允许 Terminal 修改应用，或用命令行安装。"
+        if log.contains("cannot write to docker.app resources") || log.contains("operation not permitted") || log.contains("permission denied") || log.contains("read-only file system") {
+            hint += "\n可能原因：macOS 的“应用管理/App Management”拦截了对 Docker.app 的写入。请到“系统设置 > 隐私与安全性 > 应用管理”允许 Terminal 修改应用，然后重新点击安装。"
         } else if log.contains("could not locate app.asar") || log.contains("could not find a desktop ui html") {
             hint += "\n可能原因：这个 Docker Desktop 版本的资源结构变化较大，需要适配新的 app.asar 路径或入口文件。"
         } else if log.contains("docker engine did not become available") {
